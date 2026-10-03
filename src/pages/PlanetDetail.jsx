@@ -65,6 +65,10 @@ export default function PlanetDetail() {
 
   const p = planet;
   const g = galaxy;
+  const compatibleAgents = Array.isArray(p.compatibleAgents) ? p.compatibleAgents : [];
+  const updatedAt = p.updatedAt && !Number.isNaN(Date.parse(p.updatedAt))
+    ? new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium" }).format(new Date(p.updatedAt))
+    : "未提供";
 
   const isFav = isFavorite(p.id);
 
@@ -161,6 +165,32 @@ export default function PlanetDetail() {
             <div style={{ position: "absolute", top: 0, left: 22, right: 22, height: 1, background: `linear-gradient(90deg,transparent,${lineStrong},transparent)` }} />
             {p.body}
           </div>
+
+          <section style={{ marginTop: 24, border: `1px solid ${line}`, borderRadius: 2, padding: 20, background: "rgba(255,255,255,.015)" }}>
+            <div style={{ fontFamily: "'Space Mono',monospace", fontSize: 11, color: col, letterSpacing: ".18em", textTransform: "uppercase", marginBottom: 16 }}>
+              PROVENANCE // 信任資訊
+            </div>
+            <dl style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "14px 22px", margin: 0 }}>
+              {[
+                ["作者", p.author || "未提供"],
+                ["授權", p.license || "未提供"],
+                ["版本", p.version || "未提供"],
+                ["更新時間", updatedAt],
+                ["相容 Agent", compatibleAgents.length ? compatibleAgents.join(" / ") : "未提供"],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt style={{ fontFamily: "'Space Mono',monospace", fontSize: 9.5, color: inkFaint, letterSpacing: ".1em", textTransform: "uppercase" }}>{label}</dt>
+                  <dd style={{ color: inkDim, fontSize: 13, margin: "5px 0 0", overflowWrap: "anywhere" }}>{value}</dd>
+                </div>
+              ))}
+              <div>
+                <dt style={{ fontFamily: "'Space Mono',monospace", fontSize: 9.5, color: inkFaint, letterSpacing: ".1em", textTransform: "uppercase" }}>原始來源</dt>
+                <dd style={{ color: inkDim, fontSize: 13, margin: "5px 0 0", overflowWrap: "anywhere" }}>
+                  {p.sourceUrl ? <a href={p.sourceUrl} target="_blank" rel="noreferrer" style={{ color: col }}>查看來源 ↗</a> : "未提供"}
+                </dd>
+              </div>
+            </dl>
+          </section>
 
           <div style={{ display: "flex", gap: 12, marginTop: 26 }}>
             <button onClick={handleToggleFavorite} style={favBtnStyle}>{isFav ? "✓ 已收藏至航點" : "✦ 收藏至航點"}</button>

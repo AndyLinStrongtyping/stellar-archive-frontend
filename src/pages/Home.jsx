@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { gsap } from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -6,6 +6,7 @@ import Starfield from "../components/Starfield.jsx";
 import CornerBrackets from "../components/CornerBrackets.jsx";
 import { setGlowColor, resetGlowColor } from "../components/CursorGlow.jsx";
 import { GALAXIES, withAlpha } from "../data.js";
+import { getCatalog } from "../api/catalog.js";
 
 gsap.registerPlugin(useGSAP);
 
@@ -15,6 +16,7 @@ const inkFaint = "#54575e";
 const line = "rgba(235,236,239,.10)";
 const lineStrong = "rgba(235,236,239,.24)";
 const steel = "#9cadbd";
+const sourceCommit = import.meta.env.VITE_SOURCE_COMMIT || "local";
 
 const navLinkStyle = {
   color: inkDim,
@@ -87,6 +89,27 @@ export default function Home() {
   const copyRef = useRef(null);
   const ctaGroupRef = useRef(null);
   const horizonRef = useRef(null);
+  const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [catalogCounts, setCatalogCounts] = useState({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getCatalog(controller.signal)
+      .then(({ galaxies, planets }) => {
+        const counts = Object.fromEntries(galaxies.map((galaxy) => [galaxy.id, 0]));
+        planets.forEach((planet) => {
+          counts[planet.galaxy] = (counts[planet.galaxy] || 0) + 1;
+        });
+        setCatalogCounts(counts);
+        setCatalogStatus("ready");
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setCatalogStatus("error");
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useGSAP(
     () => {
@@ -326,7 +349,11 @@ export default function Home() {
               </div>
               <p style={{ color: inkDim, fontSize: 13.5, lineHeight: 1.85, margin: "16px 0 0", fontWeight: 300 }}>{c.desc}</p>
               <div style={{ ...monoLabel, fontSize: 10.5, color: inkFaint, marginTop: 22, display: "flex", alignItems: "center", gap: 8 }}>
-                {c.tag} <span style={{ color: c.color }}>→</span>
+                {catalogStatus === "ready"
+                  ? `${catalogCounts[c.galaxy] || 0} ENTRIES CATALOGUED`
+                  : catalogStatus === "loading"
+                    ? "CHECKING CATALOG"
+                    : "CATALOG UNAVAILABLE"} <span style={{ color: c.color }}>→</span>
               </div>
             </Link>
           ))}
@@ -346,8 +373,12 @@ export default function Home() {
           gap: 8,
         }}
       >
-        <span style={{ ...monoLabel, fontSize: 9.5, color: inkFaint }}>SYSTEM STATUS: NOMINAL</span>
-        <span style={{ ...monoLabel, fontSize: 9.5, color: inkFaint }}>TRANSMISSION ENCRYPTED · CH.03</span>
+        <span style={{ ...monoLabel, fontSize: 9.5, color: catalogStatus === "error" ? "#d8a093" : inkFaint }}>
+          {catalogStatus === "ready" && "SYSTEM STATUS: NOMINAL"}
+          {catalogStatus === "loading" && "SYSTEM STATUS: CHECKING CATALOG"}
+          {catalogStatus === "error" && "SYSTEM STATUS: CATALOG UNAVAILABLE"}
+        </span>
+        <span style={{ ...monoLabel, fontSize: 9.5, color: inkFaint }}>SOURCE: {sourceCommit.slice(0, 12)} · CH.03</span>
       </div>
     </div>
   );
